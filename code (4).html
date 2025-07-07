@@ -1,0 +1,2279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perlombaan Cerdas SMP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        .question-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .question-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .timer-animation {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .option-item.selected {
+            background-color: #bfdbfe; /* blue-200 */
+            border-color: #93c5fd; /* blue-300 */
+        }
+        .option-item.correct {
+            background-color: #d1fae5; /* green-100 */
+            border-color: #34d399; /* green-500 */
+        }
+        .option-item.incorrect {
+            background-color: #fee2e2; /* red-100 */
+            border-color: #ef4444; /* red-500 */
+        }
+        .question-image, .option-image {
+            max-width: 100%;
+            height: auto;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .option-image {
+            max-height: 80px; /* Smaller for options */
+            max-width: 80px;
+            object-fit: contain;
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+        }
+        .option-item .option-text {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-sans">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+        <h1 class="mt-8 text-3xl font-bold text-blue-600">Memuat Perlombaan Cerdas SMP</h1>
+        <p class="mt-2 text-gray-600">Mempersiapkan aplikasi...</p>
+    </div>
+
+    <!-- Main Container -->
+    <div id="appContainer" class="container mx-auto px-4 py-8 hidden fade-in">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/06319f02-0b5c-41a5-a751-764aed1bf49b.png" alt="Logo Perlombaan Cerdas berupa ilustrasi otak dengan kilauan cahaya biru" class="h-16 mr-4" style="outline: rgb(0, 0, 0) dotted 3px; outline-offset: 1px;">
+                <h1 class="text-3xl font-bold text-blue-800">Perlombaan Cerdas SMP</h1>
+            </div>
+            <div id="userSection" class="flex items-center">
+                <span id="teamNameDisplay" class="hidden mr-4 font-semibold text-blue-700"></span>
+                <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg hidden">Logout</button>
+            </div>
+        </header>
+
+        <!-- Auth Screens -->
+        <div id="authScreens">
+            <!-- Login Regu Form -->
+            <div id="teamLoginForm" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mb-8">
+                <h2 class="text-2xl font-bold text-center text-blue-700 mb-6">Login Regu</h2>
+                <div class="bg-blue-50 p-3 rounded-lg mb-4 text-sm text-blue-800">
+                    <p class="font-semibold">Cara Login Regu:</p>
+                    <ol class="list-decimal pl-4 mt-1 space-y-1">
+                        <li>Masukkan nama regu Anda yang sudah terdaftar.</li>
+                        <li>Klik tombol "Masuk"</li>
+                    </ol>
+                </div>
+                <div class="space-y-4" style="min-height: auto;">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Regu</label>
+                        <input id="teamNameInput" type="text" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-500">
+                    </div>
+                    <button id="teamLoginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                        Masuk
+                    </button>
+                    <div class="text-center mt-4 space-y-2">
+                        <button onclick="document.getElementById('teamLoginForm').classList.add('hidden'); document.getElementById('teamRegistrationForm').classList.remove('hidden');" 
+                                class="text-green-600 hover:text-green-800 text-sm font-medium">
+                            Belum punya akun? Daftar Regu Baru
+                        </button>
+                        <button onclick="document.getElementById('teamLoginForm').classList.add('hidden'); document.getElementById('adminLoginForm').classList.remove('hidden')" 
+                                class="text-purple-600 hover:text-purple-800 text-sm font-medium block w-full">
+                            Login sebagai Admin
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Login Form -->
+            <div id="adminLoginForm" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mb-8 hidden">
+                <h2 class="text-2xl font-bold text-center text-purple-700 mb-6">Admin Login</h2>
+                <div class="bg-purple-50 p-3 rounded-lg mb-4 text-sm text-purple-800">
+                    <p class="font-semibold">Cara Login Admin:</p>
+                    <ol class="list-decimal pl-4 mt-1 space-y-1">
+                        <li>Username: adminnara</li>
+                        <li>Password: adminnara</li>
+                        <li>Klik tombol "Login Admin"</li>
+                    </ol>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input id="adminUsernameInput" type="text" value="adminnara" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input id="adminPasswordInput" type="password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 focus:border-purple-500">
+                    </div>
+                    <button id="adminLoginBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                        Login Admin
+                    </button>
+                    <button id="switchToTeamLoginBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200">
+                        Masuk Sebagai Regu
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Regu Registration Form (Now visible and functional) -->
+            <div id="teamRegistrationForm" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mb-8 hidden">
+                <h2 class="text-2xl font-bold text-center text-green-700 mb-6">Daftar Regu Baru</h2>
+                <div class="bg-green-50 p-3 rounded-lg mb-4 text-sm text-green-800">
+                    <p class="font-semibold">Informasi Pendaftaran:</p>
+                    <ol class="list-decimal pl-4 mt-1 space-y-1">
+                        <li>Masukkan nama regu Anda.</li>
+                        <li>Masukkan nama 3 anggota regu Anda.</li>
+                        <li>Klik tombol "Daftarkan Regu".</li>
+                    </ol>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Regu</label>
+                        <input id="regTeamName" type="text" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-300 focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Anggota Regu (3 Orang)</label>
+                        <input id="member1" type="text" placeholder="Anggota 1" class="w-full px-4 py-2 border rounded-lg mb-2 focus:ring-2 focus:ring-green-300 focus:border-green-500">
+                        <input id="member2" type="text" placeholder="Anggota 2" class="w-full px-4 py-2 border rounded-lg mb-2 focus:ring-2 focus:ring-green-300 focus:border-green-500">
+                        <input id="member3" type="text" placeholder="Anggota 3" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-300 focus:border-green-500">
+                    </div>
+                    <button id="registerTeamBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                        Daftarkan Regu
+                    </button>
+                    <button id="switchToLoginBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200">
+                        Sudah Punya Akun? Login
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="hidden">
+            <!-- Competition Dashboard -->
+            <div id="dashboard" class="mb-8">
+                <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Dashboard Perlombaan</h2>
+                
+                <div class="flex justify-center space-x-4 mb-8">
+                    <button id="startCompetitionBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition duration-200 transform hover:scale-105">
+                        Mulai Perlombaan
+                    </button>
+                    <button id="adminPanelBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition duration-200 transform hover:scale-105">
+                        Panel Admin
+                    </button>
+                    <button id="leaderboardBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition duration-200 transform hover:scale-105">
+                        Leaderboard
+                    </button>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Aturan Perlombaan:</h3>
+                    <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                        <li>Setiap regu terdiri dari 3 anggota</li>
+                        <li>Perlombaan terdiri dari beberapa ronde dengan tema berbeda (Ingatan Kilat, Cepat Tepat, Nalar Jitu, Wawasan Dunia, Angka Ajaib, Pilihan Ganda Kompleks, Code Breakers)</li>
+                        <li>Setiap ronde berisi jumlah soal dan waktu terbatas yang berbeda</li>
+                        <li>Soal terdiri dari pilihan ganda tunggal, pilihan ganda kompleks, input angka, dan esai</li>
+                        <li>Soal dan/atau jawaban bisa menyertakan gambar</li>
+                        <li>Essay akan dinilai oleh admin setelah perlombaan</li>
+                        <li>Leaderboard akan menampilkan ranking per ronde dan keseluruhan</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Round Selection -->
+            <div id="roundSelection" class="hidden mb-8">
+                <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Pilih Ronde</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Ingatan Kilat Round Card -->
+                    <div class="question-card bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl" onclick="selectRound('memory')">
+                        <div class="h-48 bg-gradient-to-r from-blue-400 to-indigo-600 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/640f2b29-5ed4-4f38-abcd-ec9cabada861.png" alt="Ilustrasi otak dengan kilatan cahaya mewakili ronde menghafal" class="h-32">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Ingatan Kilat</h3>
+                            <p class="text-gray-600">Uji kemampuan menghafal Anda dalam waktu singkat!</p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-500">10 Soal</span>
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Waktu: 5 menit</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cepat Tepat Round Card -->
+                    <div class="question-card bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl" onclick="selectRound('speed')">
+                        <div class="h-48 bg-gradient-to-r from-green-400 to-teal-600 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b3765195-eada-4f00-b343-3f81f953ffa2.png" alt="Ilustrasi kilat mewakili ronde berpikir cepat" class="h-32">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Cepat Tepat</h3>
+                            <p class="text-gray-600">Jawab pertanyaan secepat mungkin!</p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-500">10 Soal</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Waktu: 3 menit</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Nalar Jitu Round Card -->
+                    <div class="question-card bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl" onclick="selectRound('logic')">
+                        <div class="h-48 bg-gradient-to-r from-purple-400 to-indigo-600 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b51-4620-b0ac-629357d37540/image/3d0c1148-5b51-4620-b0ac-629357d37540.png" alt="Ilustrasi teka-teki mewakili ronde logika" class="h-32">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Nalar Jitu</h3>
+                            <p class="text-gray-600">Asah kemampuan logika dan pemecahan masalah!</p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-500">8 Soal</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">Waktu: 8 menit</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Wawasan Dunia Round Card -->
+                    <div class="question-card bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl" onclick="selectRound('intelligence')">
+                        <div class="h-48 bg-gradient-to-r from-yellow-400 to-orange-600 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/bc862e09-f6e8-453b-a230-b89d8b673ddb.png" alt="Ilustrasi kecerdasan mewakili ronde kecerdasan" class="h-32">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Wawasan Dunia</h3>
+                            <p class="text-gray-600">Uji pengetahuan umum dan kemampuan analisis!</p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-500">12 Soal</span>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Waktu: 10 menit</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Angka Ajaib Round Card -->
+                    <div class="question-card bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl" onclick="selectRound('numeric')">
+                        <div class="h-48 bg-gradient-to-r from-red-400 to-pink-600 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/numeric_icon.png" alt="Ilustrasi angka mewakili ronde angka ajaib" class="h-32">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Angka Ajaib</h3>
+                            <p class="text-gray-600">Hitung dan masukkan jawaban angka Anda!</p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-500">7 Soal</span>
+                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Waktu: 6 menit</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pilihan Ganda Kompleks Round Card -->
+                    <div class="question-card bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl" onclick="selectRound('multi_choice')">
+                        <div class="h-48 bg-gradient-to-r from-teal-400 to-cyan-600 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/multi_choice_icon.png" alt="Ilustrasi kotak centang mewakili ronde pilihan ganda kompleks" class="h-32">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Pilihan Ganda Kompleks</h3>
+                            <p class="text-gray-600">Pilih semua jawaban yang menurut Anda benar!</p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-500">5 Soal</span>
+                                <span class="bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded-full">Waktu: 7 menit</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Code Breakers Round Card -->
+                    <div class="question-card bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl" onclick="selectRound('code_breakers')">
+                        <div class="h-48 bg-gradient-to-r from-gray-700 to-gray-900 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/code_breakers_icon.png" alt="Ilustrasi kunci dan gembok mewakili ronde code breakers" class="h-32">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Code Breakers</h3>
+                            <p class="text-gray-600">Pecahkan kode dan jelaskan jawaban Anda!</p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-500">3 Soal</span>
+                                <span class="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full">Waktu: 12 menit</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center mt-8">
+                    <button id="backToDashboardBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold">
+                        Kembali ke Dashboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quiz Screen -->
+            <div id="quizScreen" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="bg-white rounded-lg shadow px-4 py-2">
+                        <span class="font-semibold">Ronde: </span>
+                        <span id="currentRoundName" class="text-blue-600 font-bold"></span>
+                    </div>
+                    
+                    <div id="timer" class="bg-red-500 text-white rounded-lg shadow px-4 py-2 font-bold text-xl flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                        </svg>
+                        <span id="timeRemaining">05:00</span>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow px-4 py-2">
+                        <span class="font-semibold">Soal: </span>
+                        <span id="currentQuestionNumber" class="text-blue-600 font-bold">1/10</span>
+                    </div>
+                </div>
+                
+                <div id="questionContainer" class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h3 id="questionText" class="text-xl font-semibold text-gray-800 mb-4"></h3>
+                    <img id="questionImageDisplay" src="" alt="Gambar Pertanyaan" class="question-image hidden" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/6f8353a8-e155-439a-95b7-6f708d92e49f.png">
+                    
+                    <!-- Multiple Choice Options (Single Correct) -->
+                    <div id="multipleChoiceOptions" class="space-y-3 mb-4 hidden">
+                        <div class="option-item bg-gray-100 hover:bg-gray-200 rounded-lg p-3 cursor-pointer" data-option-index="0">
+                            <span class="font-medium">A.</span> <span class="option-text"></span>
+                            <img src="" alt="Gambar Opsi" class="option-image hidden" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/ed7e433d-1e56-465c-9b52-ef1fe61b8f25.png">
+                        </div>
+                        <div class="option-item bg-gray-100 hover:bg-gray-200 rounded-lg p-3 cursor-pointer" data-option-index="1">
+                            <span class="font-medium">B.</span> <span class="option-text"></span>
+                            <img src="" alt="Gambar Opsi" class="option-image hidden" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/eac44338-37cc-4ea2-b2ce-5cbbd43c2a0f.png">
+                        </div>
+                        <div class="option-item bg-gray-100 hover:bg-gray-200 rounded-lg p-3 cursor-pointer" data-option-index="2">
+                            <span class="font-medium">C.</span> <span class="option-text"></span>
+                            <img src="" alt="Gambar Opsi" class="option-image hidden" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b17b494a-623e-4600-bb55-98496df56434.png">
+                        </div>
+                        <div class="option-item bg-gray-100 hover:bg-gray-200 rounded-lg p-3 cursor-pointer" data-option-index="3">
+                            <span class="font-medium">D.</span> <span class="option-text"></span>
+                            <img src="" alt="Gambar Opsi" class="option-image hidden" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3da1aec7-9a8e-4c6f-bcd8-cf14eb6d33cb.png">
+                        </div>
+                    </div>
+
+                    <!-- Multiple Choice Options (Multiple Correct) -->
+                    <div id="multiCorrectOptions" class="space-y-3 mb-4 hidden">
+                        <!-- Options will be dynamically generated here -->
+                    </div>
+                    
+                    <!-- Numeric Answer -->
+                    <div id="numericAnswerContainer" class="hidden">
+                        <label for="numericAnswer" class="block text-sm font-medium text-gray-700 mb-2">Jawaban Anda (angka):</label>
+                        <input id="numericAnswer" type="number" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-500" placeholder="Masukkan angka...">
+                    </div>
+
+                    <!-- Essay Answer -->
+                    <div id="essayAnswerContainer" class="hidden">
+                        <label for="essayAnswer" class="block text-sm font-medium text-gray-700 mb-2">Jawaban Anda:</label>
+                        <textarea id="essayAnswer" rows="4" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-500" placeholder="Tulis jawaban Anda di sini..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between">
+                    <button id="previousQuestionBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold">
+                        Sebelumnya
+                    </button>
+                    <button id="nextQuestionBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold">
+                        Selanjutnya
+                    </button>
+                    <button id="submitQuizBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold hidden">
+                        Akhiri Ronde
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="resultsScreen" class="hidden">
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h2 class="text-2xl font-bold text-center text-blue-800 mb-4">Hasil Ronde <span id="completedRoundName"></span></h2>
+                    
+                    <div class="flex flex-col md:flex-row justify-around items-center mb-6">
+                        <div class="bg-blue-50 rounded-lg shadow-inner p-4 mb-4 md:mb-0 text-center w-full md:w-1/3">
+                            <div class="text-blue-600 font-semibold mb-2">Skor Anda</div>
+                            <div id="userScore" class="text-4xl font-bold text-blue-800">85</div>
+                            <div class="text-blue-500">Poin</div>
+                        </div>
+                        
+                        <div class="bg-green-50 rounded-lg shadow-inner p-4 mb-4 md:mb-0 text-center w-full md:w-1/3">
+                            <div class="text-green-600 font-semibold mb-2">Peringkat Anda</div>
+                            <div id="userRank" class="text-4xl font-bold text-green-800">3</div>
+                            <div class="text-green-500">Dari 20 Regu</div>
+                        </div>
+                        
+                        <div class="bg-purple-50 rounded-lg shadow-inner p-4 text-center w-full md:w-1/3">
+                            <div class="text-purple-600 font-semibold mb-2">Waktu Tersisa</div>
+                            <div id="timeLeft" class="text-4xl font-bold text-purple-800">01:23</div>
+                            <div class="text-purple-500">menit:detik</div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">Detail Jawaban:</h3>
+                        <div id="answerDetails" class="space-y-4">
+                            <!-- Will be populated with answer details -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center">
+                    <button id="returnToRoundSelectionBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold mr-4">
+                        Ronde Selanjutnya
+                    </button>
+                    <button id="returnToDashboardFromResultsBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold">
+                        Kembali ke Dashboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- Leaderboard Screen -->
+            <div id="leaderboardScreen" class="hidden">
+                <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Leaderboard</h2>
+                
+                <div class="flex justify-center mb-6">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                        <div class="flex border-b">
+                            <button id="showOverallLeaderboardBtn" class="px-6 py-3 font-medium text-blue-600 border-b-2 border-blue-600">Keseluruhan</button>
+                            <button id="showMemoryLeaderboardBtn" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Ingatan Kilat</button>
+                            <button id="showSpeedLeaderboardBtn" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Cepat Tepat</button>
+                            <button id="showLogicLeaderboardBtn" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Nalar Jitu</button>
+                            <button id="showIntelligenceLeaderboardBtn" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Wawasan Dunia</button>
+                            <button id="showNumericLeaderboardBtn" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Angka Ajaib</button>
+                            <button id="showMultiChoiceLeaderboardBtn" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Pilihan Ganda Kompleks</button>
+                            <button id="showCodeBreakersLeaderboardBtn" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Code Breakers</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peringkat</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Regu</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skor</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Will be populated with leaderboard data -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="flex justify-center mt-6">
+                    <button id="backToDashboardBtn2" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold">
+                        Kembali ke Dashboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="adminPanel" class="hidden">
+                <h2 class="text-2xl font-bold text-center text-purple-800 mb-6">Panel Admin</h2>
+                
+                <div class="flex justify-center space-x-4 mb-8">
+                    <button id="manageQuestionsBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition duration-200 transform hover:scale-105">
+                        Kelola Soal
+                    </button>
+                    <button id="gradeEssaysBtn" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition duration-200 transform hover:scale-105">
+                        Nilai Essay
+                    </button>
+                    <button id="manageTeamsBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition duration-200 transform hover:scale-105">
+                        Kelola Regu
+                    </button>
+                </div>
+                
+                <!-- Questions Management -->
+                <div id="questionsManagement" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Kelola Soal</h3>
+                    
+                    <div class="flex justify-between mb-4">
+                        <button id="addQuestionBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                            Tambah Soal Baru
+                        </button>
+                        <div class="flex space-x-2">
+                            <select id="questionFilter" class="px-4 py-2 border rounded-lg">
+                                <option value="all">Semua Tipe</option>
+                                <option value="multiple-choice">Pilihan Ganda Tunggal</option>
+                                <option value="multi-correct">Pilihan Ganda Kompleks</option>
+                                <option value="numeric">Input Angka</option>
+                                <option value="essay">Essay</option>
+                            </select>
+                            <select id="roundFilter" class="px-4 py-2 border rounded-lg">
+                                <option value="all">Semua Ronde</option>
+                                <option value="memory">Ingatan Kilat</option>
+                                <option value="speed">Cepat Tepat</option>
+                                <option value="logic">Nalar Jitu</option>
+                                <option value="intelligence">Wawasan Dunia</option>
+                                <option value="numeric">Angka Ajaib</option>
+                                <option value="multi_choice">Pilihan Ganda Kompleks</option>
+                                <option value="code_breakers">Code Breakers</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="questionsList" class="space-y-4">
+                        <!-- Will be populated with questions -->
+                    </div>
+                    
+                    <!-- Add/Edit Question Modal -->
+                    <div id="questionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+                        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl" style="max-height: 90vh; overflow-y: auto;">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 id="modalTitle" class="text-xl font-semibold"></h4>
+                                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Ronde</label>
+                                    <select id="questionRound" class="w-full px-4 py-2 border rounded-lg">
+                                        <option value="memory">Ingatan Kilat</option>
+                                        <option value="speed">Cepat Tepat</option>
+                                        <option value="logic">Nalar Jitu</option>
+                                        <option value="intelligence">Wawasan Dunia</option>
+                                        <option value="numeric">Angka Ajaib</option>
+                                        <option value="multi_choice">Pilihan Ganda Kompleks</option>
+                                        <option value="code_breakers">Code Breakers</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Soal</label>
+                                    <select id="questionType" class="w-full px-4 py-2 border rounded-lg">
+                                        <option value="multiple-choice">Pilihan Ganda Tunggal</option>
+                                        <option value="multi-correct">Pilihan Ganda Kompleks</option>
+                                        <option value="numeric">Input Angka</option>
+                                        <option value="essay">Essay</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pertanyaan</label>
+                                    <textarea id="questionTextInput" rows="3" class="w-full px-4 py-2 border rounded-lg"></textarea>
+                                    <label class="block text-sm font-medium text-gray-700 mt-2 mb-1">URL Gambar Pertanyaan (Opsional)</label>
+                                    <input type="text" id="questionImageInput" class="w-full px-4 py-2 border rounded-lg" placeholder="Contoh: https://example.com/gambar.jpg">
+                                </div>
+                                
+                                <div id="optionsContainer" class="space-y-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pilihan Jawaban</label>
+                                    <div id="mcOptions" class="space-y-2" style="max-height: 300px; overflow-y: auto;">
+                                        <!-- Options will be dynamically generated here -->
+                                    </div>
+                                    <button id="addOptionBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-lg text-sm hidden">Tambah Opsi</button>
+                                </div>
+
+                                <div id="numericAnswerInputContainer" class="hidden">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Jawaban Benar (Angka)</label>
+                                    <input id="numericCorrectAnswer" type="number" class="w-full px-4 py-2 border rounded-lg">
+                                </div>
+                                
+                                <div id="pointsContainer">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Poin</label>
+                                    <input id="questionPoints" type="number" min="1" class="w-full px-4 py-2 border rounded-lg" value="10">
+                                </div>
+                                
+                                <div class="flex justify-end space-x-3">
+                                    <button id="cancelQuestionBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                                        Batal
+                                    </button>
+                                    <button id="saveQuestionBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                                        Simpan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Essay Grading -->
+                <div id="essayGrading" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Nilai Jawaban Essay</h3>
+                    
+                    <div class="flex mb-4 space-x-4">
+                        <select id="gradingRoundFilter" class="px-4 py-2 border rounded-lg">
+                            <option value="all">Semua Ronde</option>
+                            <option value="memory">Ingatan Kilat</option>
+                            <option value="speed">Cepat Tepat</option>
+                            <option value="logic">Nalar Jitu</option>
+                            <option value="intelligence">Wawasan Dunia</option>
+                            <option value="numeric">Angka Ajaib</option>
+                            <option value="multi_choice">Pilihan Ganda Kompleks</option>
+                            <option value="code_breakers">Code Breakers</option>
+                        </select>
+                        <select id="gradingTeamFilter" class="px-4 py-2 border rounded-lg">
+                            <option value="all">Semua Regu</option>
+                            <!-- Will be populated with teams -->
+                        </select>
+                    </div>
+                    
+                    <div id="essaysList" class="space-y-4">
+                        <!-- Will be populated with essays to grade -->
+                    </div>
+                </div>
+                
+                <!-- Regus Management -->
+                <div id="teamsManagement" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Kelola Regu Peserta</h3>
+                    
+                    <div class="flex justify-end mb-4">
+                        <button id="exportTeamsBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                            Ekspor Data Regu
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Regu</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anggota</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skor Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teamsList" class="bg-white divide-y divide-gray-200">
+                                <!-- Will be populated with teams -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center">
+                    <button id="backToDashboardBtn3" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold">
+                        Kembali ke Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fake database for demonstration
+        const fakeDatabase = {
+            teams: [
+                {
+                    id: 1,
+                    name: "Regu Cerdas",
+                    members: ["Andi", "Budi", "Citra"],
+                    scores: {
+                        memory: 85,
+                        speed: 92,
+                        logic: 78,
+                        intelligence: 88,
+                        numeric: 0, // New round score
+                        multi_choice: 0, // New round score
+                        code_breakers: 0 // New round score
+                    },
+                    // Simulate storing answers for grading essays
+                    answers: {
+                        code_breakers: {
+                            0: "Jawaban simulasi untuk soal esai 1.",
+                            1: "Jawaban simulasi untuk soal esai 2."
+                        }
+                    }
+                },
+                {
+                    id: 2,
+                    name: "Regu Genius",
+                    members: ["Dedi", "Eka", "Fitri"],
+                    scores: {
+                        memory: 78,
+                        speed: 85,
+                        logic: 90,
+                        intelligence: 82,
+                        numeric: 0, // New round score
+                        multi_choice: 0, // New round score
+                        code_breakers: 0 // New round score
+                    },
+                    answers: {
+                        code_breakers: {
+                            0: "Jawaban simulasi untuk soal esai 1 dari Regu Genius.",
+                            1: "Jawaban simulasi untuk soal esai 2 dari Regu Genius."
+                        }
+                    }
+                }
+            ],
+            leaderboard: [
+                {
+                    teamName: "Regu Cerdas",
+                    overallScore: 343,
+                    roundScores: {
+                        memory: 85,
+                        speed: 92,
+                        logic: 78,
+                        intelligence: 88,
+                        numeric: 0,
+                        multi_choice: 0,
+                        code_breakers: 0
+                    }
+                },
+                {
+                    teamName: "Regu Genius",
+                    overallScore: 335,
+                    roundScores: {
+                        memory: 78,
+                        speed: 85,
+                        logic: 90,
+                        intelligence: 82,
+                        numeric: 0,
+                        multi_choice: 0,
+                        code_breakers: 0
+                    }
+                }
+            ],
+            questions: {
+                memory: [
+                    {
+                        id: 1,
+                        type: "multiple-choice",
+                        question: "Apa ibukota Indonesia?",
+                        options: ["Jakarta", "Bandung", "Surabaya", "Medan"],
+                        correctAnswer: 0,
+                        points: 10
+                    },
+                    {
+                        id: 2,
+                        type: "essay",
+                        question: "Jelaskan proses fotosintesis secara singkat!",
+                        points: 20
+                    }
+                ],
+                speed: [
+                    {
+                        id: 1,
+                        type: "multiple-choice",
+                        question: "Berapa hasil dari 15 x 15?",
+                        options: ["125", "225", "325", "425"],
+                        correctAnswer: 1,
+                        points: 10
+                    },
+                    {
+                        id: 2,
+                        type: "multiple-choice",
+                        question: "Hewan apa yang bernapas dengan paru-paru?",
+                        options: ["Kucing", "Ikan", "Bintang Laut", "Semut"],
+                        correctAnswer: 0,
+                        points: 10
+                    }
+                ],
+                logic: [
+                    {
+                        id: 1,
+                        type: "multiple-choice",
+                        question: "Jika semua manusia adalah makhluk hidup, dan Budi adalah manusia, maka...",
+                        options: ["Budi tidak hidup", "Budi adalah makhluk hidup", "Budi bukan manusia", "Tidak bisa disimpulkan"],
+                        correctAnswer: 1,
+                        points: 15
+                    }
+                ],
+                intelligence: [
+                    {
+                        id: 1,
+                        type: "essay",
+                        question: "Apa yang menyebabkan perubahan musim di Bumi? Jelaskan!",
+                        points: 25
+                    }
+                ],
+                numeric: [
+                    {
+                        id: 1,
+                        type: "numeric",
+                        question: "Berapakah akar kuadrat dari 144?",
+                        correctAnswer: 12,
+                        points: 15
+                    },
+                    {
+                        id: 2,
+                        type: "numeric",
+                        question: "Jika sebuah toko memberikan diskon 20% untuk barang seharga Rp 50.000, berapa harga akhir barang tersebut?",
+                        correctAnswer: 40000,
+                        points: 20
+                    }
+                ],
+                multi_choice: [
+                    {
+                        id: 1,
+                        type: "multi-correct",
+                        question: "Pilih semua hewan yang termasuk mamalia:",
+                        options: ["Paus", "Hiu", "Kelelawar", "Burung Hantu", "Kucing"],
+                        correctAnswers: [0, 2, 4], // Indices of correct options
+                        points: 25
+                    },
+                    {
+                        id: 2,
+                        type: "multi-correct",
+                        question: "Pilih semua warna primer:",
+                        options: ["Merah", "Hijau", "Biru", "Kuning", "Ungu"],
+                        correctAnswers: [0, 2, 3],
+                        points: 20
+                    }
+                ],
+                code_breakers: [
+                    {
+                        id: 1,
+                        type: "essay",
+                        question: "Jelaskan mengapa penting untuk menjaga kebersihan lingkungan di sekolah!",
+                        points: 30
+                    },
+                    {
+                        id: 2,
+                        type: "essay",
+                        question: "Bagaimana cara kerja internet secara sederhana?",
+                        points: 40
+                    }
+                ]
+            },
+            admin: {
+                username: "adminnara",
+                password: "adminnara"
+            }
+        };
+
+        // Current app state
+        const appState = {
+            currentUser: null,
+            isAdmin: false,
+            currentRound: null,
+            currentQuestionIndex: 0,
+            answers: {}, // Stores user answers for the current round
+            timeRemaining: 300, // Default 5 minutes
+            timerInterval: null
+        };
+
+        // DOM Elements
+        const loadingScreen = document.getElementById('loadingScreen');
+        const appContainer = document.getElementById('appContainer');
+        const teamLoginForm = document.getElementById('teamLoginForm');
+        const adminLoginForm = document.getElementById('adminLoginForm');
+        const teamRegistrationForm = document.getElementById('teamRegistrationForm');
+        const switchToTeamLoginBtn = document.getElementById('switchToTeamLoginBtn');
+        const teamLoginBtn = document.getElementById('teamLoginBtn');
+        const adminLoginBtn = document.getElementById('adminLoginBtn');
+        const mainContent = document.getElementById('mainContent');
+        const dashboard = document.getElementById('dashboard');
+        const roundSelection = document.getElementById('roundSelection');
+        const quizScreen = document.getElementById('quizScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+        const leaderboardScreen = document.getElementById('leaderboardScreen');
+        const adminPanel = document.getElementById('adminPanel');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const teamNameDisplay = document.getElementById('teamNameDisplay');
+        const startCompetitionBtn = document.getElementById('startCompetitionBtn');
+        const adminPanelBtn = document.getElementById('adminPanelBtn');
+        const leaderboardBtn = document.getElementById('leaderboardBtn');
+        const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+        const backToDashboardBtn2 = document.getElementById('backToDashboardBtn2'); // For leaderboard
+        const backToDashboardBtn3 = document.getElementById('backToDashboardBtn3'); // For admin panel
+        const registerTeamBtn = document.getElementById('registerTeamBtn');
+        const switchToLoginBtn = document.getElementById('switchToLoginBtn');
+        const questionsManagement = document.getElementById('questionsManagement');
+        const essayGrading = document.getElementById('essayGrading');
+        const teamsManagement = document.getElementById('teamsManagement');
+        const manageQuestionsBtn = document.getElementById('manageQuestionsBtn');
+        const gradeEssaysBtn = document.getElementById('gradeEssaysBtn');
+        const manageTeamsBtn = document.getElementById('manageTeamsBtn');
+
+        // New DOM elements for results screen buttons
+        const returnToRoundSelectionBtn = document.getElementById('returnToRoundSelectionBtn');
+        const returnToDashboardFromResultsBtn = document.getElementById('returnToDashboardFromResultsBtn'); // Unique ID for results screen button
+
+        // Admin Panel Question Management DOM elements
+        const addQuestionBtn = document.getElementById('addQuestionBtn');
+        const questionModal = document.getElementById('questionModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const modalTitle = document.getElementById('modalTitle');
+        const questionRoundSelect = document.getElementById('questionRound');
+        const questionTypeSelect = document.getElementById('questionType');
+        const questionTextInput = document.getElementById('questionTextInput');
+        const questionImageInput = document.getElementById('questionImageInput'); // New
+        const optionsContainer = document.getElementById('optionsContainer');
+        const mcOptions = document.getElementById('mcOptions'); // For single/multi-correct options
+        const addOptionBtn = document.getElementById('addOptionBtn');
+        const numericAnswerInputContainer = document.getElementById('numericAnswerInputContainer');
+        const numericCorrectAnswerInput = document.getElementById('numericCorrectAnswer');
+        const questionPointsInput = document.getElementById('questionPoints');
+        const saveQuestionBtn = document.getElementById('saveQuestionBtn');
+        const cancelQuestionBtn = document.getElementById('cancelQuestionBtn');
+        const questionsListDiv = document.getElementById('questionsList');
+        const questionFilterSelect = document.getElementById('questionFilter');
+        const roundFilterSelect = document.getElementById('roundFilter');
+
+        // Quiz Screen DOM elements for images
+        const questionImageDisplay = document.getElementById('questionImageDisplay');
+        const multipleChoiceOptionsDiv = document.getElementById('multipleChoiceOptions');
+        const multiCorrectOptionsDiv = document.getElementById('multiCorrectOptions');
+
+
+        let editingQuestionId = null;
+        let editingQuestionRound = null;
+
+        // Map round types to display names
+        const roundDisplayNames = {
+            memory: 'Ingatan Kilat',
+            speed: 'Cepat Tepat',
+            logic: 'Nalar Jitu',
+            intelligence: 'Wawasan Dunia',
+            numeric: 'Angka Ajaib',
+            multi_choice: 'Pilihan Ganda Kompleks',
+            code_breakers: 'Code Breakers'
+        };
+
+        // Initialize the app
+        function initApp() {
+            // Simulate loading time
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                checkLoginStatus();
+            }, 2000);
+
+            // Setup event listeners
+            setupEventListeners();
+        }
+
+        // Setup all event listeners
+        function setupEventListeners() {
+            // Login/Registration buttons
+            teamLoginBtn.addEventListener('click', handleTeamLogin);
+            adminLoginBtn.addEventListener('click', handleAdminLogin);
+            registerTeamBtn.addEventListener('click', handleTeamRegistration); 
+
+            switchToTeamLoginBtn.addEventListener('click', () => {
+                adminLoginForm.classList.add('hidden');
+                teamLoginForm.classList.remove('hidden');
+                teamRegistrationForm.classList.add('hidden'); // Ensure registration form is hidden
+            });
+            switchToLoginBtn.addEventListener('click', () => {
+                teamRegistrationForm.classList.add('hidden');
+                teamLoginForm.classList.remove('hidden');
+                adminLoginForm.classList.add('hidden'); // Ensure admin form is hidden
+            });
+
+            // Navigation buttons
+            startCompetitionBtn.addEventListener('click', () => {
+                dashboard.classList.add('hidden');
+                roundSelection.classList.remove('hidden');
+            });
+            adminPanelBtn.addEventListener('click', () => {
+                dashboard.classList.add('hidden');
+                adminPanel.classList.remove('hidden');
+                questionsManagement.classList.remove('hidden'); // Default to questions management
+                essayGrading.classList.add('hidden');
+                teamsManagement.classList.add('hidden');
+                renderQuestionsList(); // Render questions when entering admin panel
+            });
+            leaderboardBtn.addEventListener('click', () => {
+                dashboard.classList.add('hidden');
+                leaderboardScreen.classList.remove('hidden');
+                renderLeaderboard('overall');
+            });
+            logoutBtn.addEventListener('click', handleLogout);
+            backToDashboardBtn.addEventListener('click', () => { // From round selection
+                roundSelection.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+            });
+            backToDashboardBtn2.addEventListener('click', () => { // From leaderboard
+                leaderboardScreen.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+            });
+            backToDashboardBtn3.addEventListener('click', () => { // From admin panel
+                adminPanel.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+            });
+
+            // Admin panel sub-navigation buttons
+            manageQuestionsBtn.addEventListener('click', () => {
+                questionsManagement.classList.remove('hidden');
+                essayGrading.classList.add('hidden');
+                teamsManagement.classList.add('hidden');
+                renderQuestionsList();
+            });
+            gradeEssaysBtn.addEventListener('click', () => {
+                questionsManagement.classList.add('hidden');
+                essayGrading.classList.remove('hidden');
+                teamsManagement.classList.add('hidden');
+                renderEssaysToGrade();
+            });
+            manageTeamsBtn.addEventListener('click', () => {
+                questionsManagement.classList.add('hidden');
+                essayGrading.classList.add('hidden');
+                teamsManagement.classList.remove('hidden');
+                renderTeamsList();
+            });
+
+            // Event listeners for Results Screen buttons
+            returnToRoundSelectionBtn.addEventListener('click', () => {
+                resultsScreen.classList.add('hidden');
+                roundSelection.classList.remove('hidden');
+            });
+            returnToDashboardFromResultsBtn.addEventListener('click', () => {
+                resultsScreen.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+            });
+
+            // Leaderboard filter buttons
+            document.getElementById('showOverallLeaderboardBtn').addEventListener('click', () => renderLeaderboard('overall'));
+            document.getElementById('showMemoryLeaderboardBtn').addEventListener('click', () => renderLeaderboard('memory'));
+            document.getElementById('showSpeedLeaderboardBtn').addEventListener('click', () => renderLeaderboard('speed'));
+            document.getElementById('showLogicLeaderboardBtn').addEventListener('click', () => renderLeaderboard('logic'));
+            document.getElementById('showIntelligenceLeaderboardBtn').addEventListener('click', () => renderLeaderboard('intelligence'));
+            document.getElementById('showNumericLeaderboardBtn').addEventListener('click', () => renderLeaderboard('numeric'));
+            document.getElementById('showMultiChoiceLeaderboardBtn').addEventListener('click', () => renderLeaderboard('multi_choice'));
+            document.getElementById('showCodeBreakersLeaderboardBtn').addEventListener('click', () => renderLeaderboard('code_breakers'));
+
+            // Admin Question Management Event Listeners
+            addQuestionBtn.addEventListener('click', openAddQuestionModal);
+            closeModalBtn.addEventListener('click', closeQuestionModal);
+            cancelQuestionBtn.addEventListener('click', closeQuestionModal);
+            saveQuestionBtn.addEventListener('click', saveQuestion);
+            questionTypeSelect.addEventListener('change', toggleQuestionTypeFields);
+            addOptionBtn.addEventListener('click', () => addOptionField('', false, '')); // Add new option with empty text and image
+            questionFilterSelect.addEventListener('change', renderQuestionsList);
+            roundFilterSelect.addEventListener('change', renderQuestionsList);
+        }
+
+        // Check if user is already logged in
+        function checkLoginStatus() {
+            // For demo, show regu login form by default
+            teamLoginForm.classList.remove('hidden');
+            adminLoginForm.classList.add('hidden'); 
+            teamRegistrationForm.classList.add('hidden'); 
+            adminPanelBtn.classList.add('hidden'); // Ensure admin panel button is hidden initially
+        }
+
+        // Handle regu login (now only for existing teams)
+        function handleTeamLogin() {
+            const teamName = document.getElementById('teamNameInput').value.trim();
+
+            if (!teamName) {
+                alert('Silakan masukkan nama regu');
+                return;
+            }
+
+            const team = fakeDatabase.teams.find(t => t.name === teamName);
+            
+            if (!team) {
+                alert(`Regu "${teamName}" tidak ditemukan. Silakan daftar regu baru.`);
+                // Optionally, redirect to registration form
+                teamLoginForm.classList.add('hidden');
+                teamRegistrationForm.classList.remove('hidden');
+                document.getElementById('regTeamName').value = teamName; // Pre-fill team name
+                return;
+            }
+
+            appState.currentUser = team;
+            teamLoginForm.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+            teamNameDisplay.textContent = team.name;
+            teamNameDisplay.classList.remove('hidden');
+            logoutBtn.classList.remove('hidden');
+            
+            adminPanelBtn.classList.add('hidden'); // Ensure admin panel button is hidden for regu login
+            dashboard.classList.remove('hidden');
+        }
+
+        // Handle admin login (no changes)
+        function handleAdminLogin() {
+            const username = document.getElementById('adminUsernameInput').value;
+            const password = document.getElementById('adminPasswordInput').value;
+
+            if (!username || !password) {
+                alert('Silakan masukkan username dan password');
+                return;
+            }
+
+            if (username === fakeDatabase.admin.username && password === fakeDatabase.admin.password) {
+                appState.isAdmin = true;
+                adminLoginForm.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                dashboard.classList.add('hidden'); // Hide dashboard for admin, show admin panel
+                adminPanel.classList.remove('hidden');
+                questionsManagement.classList.remove('hidden'); // Default to questions management
+                
+                startCompetitionBtn.classList.add('hidden'); // Hide start competition for admin
+                
+                teamNameDisplay.textContent = "Admin Mode";
+                teamNameDisplay.classList.remove('hidden');
+                logoutBtn.classList.remove('hidden');
+                renderQuestionsList(); // Render questions when admin logs in
+            } else {
+                alert('Username atau password salah');
+            }
+        }
+
+        // Handle team registration (now a separate function)
+        function handleTeamRegistration() {
+            const teamName = document.getElementById('regTeamName').value.trim();
+            const member1 = document.getElementById('member1').value.trim();
+            const member2 = document.getElementById('member2').value.trim();
+            const member3 = document.getElementById('member3').value.trim();
+
+            if (!teamName || !member1 || !member2 || !member3) {
+                alert('Silakan lengkapi semua data (Nama Regu dan 3 Anggota)');
+                return;
+            }
+
+            const teamExists = fakeDatabase.teams.some(t => t.name === teamName);
+            
+            if (teamExists) {
+                alert('Nama regu sudah digunakan. Silakan gunakan nama lain atau login.');
+                return;
+            }
+
+            const newId = fakeDatabase.teams.length > 0 ? Math.max(...fakeDatabase.teams.map(t => t.id)) + 1 : 1;
+            const newTeam = {
+                id: newId,
+                name: teamName,
+                members: [member1, member2, member3],
+                scores: {
+                    memory: 0,
+                    speed: 0,
+                    logic: 0,
+                    intelligence: 0,
+                    numeric: 0,
+                    multi_choice: 0,
+                    code_breakers: 0
+                },
+                answers: {} // Initialize answers for the new team
+            };
+            
+            fakeDatabase.teams.push(newTeam);
+            
+            fakeDatabase.leaderboard.push({
+                teamName: teamName,
+                overallScore: 0,
+                roundScores: {
+                    memory: 0,
+                    speed: 0,
+                    logic: 0,
+                    intelligence: 0,
+                    numeric: 0,
+                    multi_choice: 0,
+                    code_breakers: 0
+                }
+            });
+
+            alert(`Regu "${teamName}" berhasil didaftarkan! Silakan login.`);
+            
+            // After registration, switch to login form and pre-fill team name
+            teamRegistrationForm.classList.add('hidden');
+            teamLoginForm.classList.remove('hidden');
+            document.getElementById('teamNameInput').value = teamName;
+        }
+
+        // Handle logout (no changes)
+        function handleLogout() {
+            appState.currentUser = null;
+            appState.isAdmin = false;
+            mainContent.classList.add('hidden');
+            logoutBtn.classList.add('hidden');
+            teamNameDisplay.classList.add('hidden');
+            
+            teamLoginForm.classList.remove('hidden');
+            adminLoginForm.classList.add('hidden');
+            teamRegistrationForm.classList.add('hidden'); 
+            
+            dashboard.classList.remove('hidden');
+            roundSelection.classList.add('hidden');
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            leaderboardScreen.classList.add('hidden');
+            adminPanel.classList.add('hidden');
+            questionsManagement.classList.add('hidden');
+            essayGrading.classList.add('hidden');
+            teamsManagement.classList.add('hidden');
+            
+            document.getElementById('teamNameInput').value = '';
+            document.getElementById('adminUsernameInput').value = '';
+            document.getElementById('adminPasswordInput').value = '';
+            document.getElementById('regTeamName').value = '';
+            document.getElementById('member1').value = '';
+            document.getElementById('member2').value = '';
+            document.getElementById('member3').value = '';
+        }
+
+        // Select round
+        function selectRound(roundType) {
+            appState.currentRound = roundType;
+            roundSelection.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            
+            document.getElementById('currentRoundName').textContent = roundDisplayNames[roundType];
+            
+            appState.currentQuestionIndex = 0;
+            appState.answers = {}; // Reset answers for new round
+            
+            // Set time limit based on round type
+            switch (roundType) {
+                case 'memory': appState.timeRemaining = 300; break; // 5 minutes
+                case 'speed': appState.timeRemaining = 180; break;  // 3 minutes
+                case 'logic': appState.timeRemaining = 480; break;  // 8 minutes
+                case 'intelligence': appState.timeRemaining = 600; break; // 10 minutes
+                case 'numeric': appState.timeRemaining = 360; break; // 6 minutes
+                case 'multi_choice': appState.timeRemaining = 420; break; // 7 minutes
+                case 'code_breakers': appState.timeRemaining = 720; break; // 12 minutes
+                default: appState.timeRemaining = 300; // Default to 5 minutes
+            }
+            
+            updateTimerDisplay();
+            if (appState.timerInterval) clearInterval(appState.timerInterval);
+            appState.timerInterval = setInterval(() => {
+                appState.timeRemaining--;
+                updateTimerDisplay();
+                
+                if (appState.timeRemaining <= 0) {
+                    clearInterval(appState.timerInterval);
+                    document.getElementById('submitQuizBtn').click(); // Auto-submit when time runs out
+                }
+            }, 1000);
+            
+            loadQuestion(appState.currentQuestionIndex);
+        }
+
+        // Update timer display (no changes)
+        function updateTimerDisplay() {
+            const minutes = Math.floor(appState.timeRemaining / 60);
+            const seconds = appState.timeRemaining % 60;
+            document.getElementById('timeRemaining').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            const timerElement = document.getElementById('timer');
+            if (appState.timeRemaining <= 30) {
+                timerElement.classList.add('timer-animation');
+            } else {
+                timerElement.classList.remove('timer-animation');
+            }
+        }
+
+        // Load question
+        function loadQuestion(index) {
+            const roundQuestions = fakeDatabase.questions[appState.currentRound];
+            if (!roundQuestions || index >= roundQuestions.length) {
+                finishRound();
+                return;
+            }
+            
+            const question = roundQuestions[index];
+            document.getElementById('questionText').textContent = question.question;
+            document.getElementById('currentQuestionNumber').textContent = `${index + 1}/${roundQuestions.length}`;
+            
+            // Display question image if available
+            if (question.questionImage && question.questionImage.trim() !== '') {
+                questionImageDisplay.src = question.questionImage;
+                questionImageDisplay.classList.remove('hidden');
+            } else {
+                questionImageDisplay.classList.add('hidden');
+                questionImageDisplay.src = ''; // Clear previous image
+            }
+
+            // Hide all answer input types first
+            multipleChoiceOptionsDiv.classList.add('hidden');
+            multiCorrectOptionsDiv.classList.add('hidden');
+            document.getElementById('numericAnswerContainer').classList.add('hidden');
+            document.getElementById('essayAnswerContainer').classList.add('hidden');
+
+            // Clear previous options/inputs
+            multiCorrectOptionsDiv.innerHTML = '';
+            document.getElementById('numericAnswer').value = '';
+            document.getElementById('essayAnswer').value = '';
+
+            if (question.type === 'multiple-choice') {
+                multipleChoiceOptionsDiv.classList.remove('hidden');
+                const optionItems = document.querySelectorAll('#multipleChoiceOptions .option-item');
+                optionItems.forEach((item, i) => {
+                    const optionTextSpan = item.querySelector('.option-text');
+                    const optionImage = item.querySelector('.option-image');
+
+                    optionTextSpan.textContent = question.options[i] || '';
+                    
+                    // Display option image if available
+                    if (question.optionImages && question.optionImages[i] && question.optionImages[i].trim() !== '') {
+                        optionImage.src = question.optionImages[i];
+                        optionImage.classList.remove('hidden');
+                    } else {
+                        optionImage.classList.add('hidden');
+                        optionImage.src = '';
+                    }
+
+                    item.onclick = () => selectOption(i); // Re-attach click listener
+                    item.classList.remove('selected'); // Clear previous selection styling
+                });
+                
+                // Restore previous selection if exists
+                if (typeof appState.answers[index] === 'number') {
+                    document.querySelectorAll('#multipleChoiceOptions .option-item')[appState.answers[index]].classList.add('selected');
+                }
+            } else if (question.type === 'multi-correct') {
+                multiCorrectOptionsDiv.classList.remove('hidden');
+                question.options.forEach((optionText, i) => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'option-item bg-gray-100 hover:bg-gray-200 rounded-lg p-3 cursor-pointer flex items-center';
+                    optionDiv.setAttribute('data-option-index', i);
+                    optionDiv.innerHTML = `
+                        <input type="checkbox" class="h-5 w-5 text-blue-600 mr-3" id="multiOption${i}">
+                        <label for="multiOption${i}" class="option-text flex-grow cursor-pointer">${optionText}</label>
+                        ${(question.optionImages && question.optionImages[i] && question.optionImages[i].trim() !== '') ? `<img src="${question.optionImages[i]}" alt="Gambar Opsi" class="option-image">` : ''}
+                    `;
+                    multiCorrectOptionsDiv.appendChild(optionDiv);
+
+                    // Add event listener for checkbox and div
+                    const checkbox = optionDiv.querySelector(`#multiOption${i}`);
+                    checkbox.addEventListener('change', () => selectMultiCorrectOption(i, checkbox.checked));
+                    optionDiv.addEventListener('click', (e) => {
+                        if (e.target !== checkbox) { // Toggle checkbox if click is not directly on it
+                            checkbox.checked = !checkbox.checked;
+                            selectMultiCorrectOption(i, checkbox.checked);
+                        }
+                    });
+                });
+
+                // Restore previous selections if exists
+                if (Array.isArray(appState.answers[index])) {
+                    appState.answers[index].forEach(selectedIdx => {
+                        const checkbox = document.getElementById(`multiOption${selectedIdx}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            checkbox.closest('.option-item').classList.add('selected');
+                        }
+                    });
+                }
+            } else if (question.type === 'numeric') {
+                document.getElementById('numericAnswerContainer').classList.remove('hidden');
+                document.getElementById('numericAnswer').value = appState.answers[index] || '';
+            } else if (question.type === 'essay') {
+                document.getElementById('essayAnswerContainer').classList.remove('hidden');
+                document.getElementById('essayAnswer').value = appState.answers[index] || '';
+            }
+            
+            document.getElementById('previousQuestionBtn').classList.toggle('hidden', index === 0);
+            document.getElementById('nextQuestionBtn').classList.toggle('hidden', index === roundQuestions.length - 1);
+            document.getElementById('submitQuizBtn').classList.toggle('hidden', index !== roundQuestions.length - 1);
+        }
+
+        // Select option for single correct multiple choice
+        function selectOption(index) {
+            document.querySelectorAll('#multipleChoiceOptions .option-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            document.querySelectorAll('#multipleChoiceOptions .option-item')[index].classList.add('selected');
+            appState.answers[appState.currentQuestionIndex] = index;
+        }
+
+        // Select option for multiple correct multiple choice
+        function selectMultiCorrectOption(index, isChecked) {
+            if (!Array.isArray(appState.answers[appState.currentQuestionIndex])) {
+                appState.answers[appState.currentQuestionIndex] = [];
+            }
+
+            const currentAnswers = appState.answers[appState.currentQuestionIndex];
+            const optionItem = document.querySelector(`#multiCorrectOptions div[data-option-index="${index}"]`);
+
+            if (isChecked) {
+                if (!currentAnswers.includes(index)) {
+                    currentAnswers.push(index);
+                    optionItem.classList.add('selected');
+                }
+            } else {
+                const idxToRemove = currentAnswers.indexOf(index);
+                if (idxToRemove > -1) {
+                    currentAnswers.splice(idxToRemove, 1);
+                    optionItem.classList.remove('selected');
+                }
+            }
+            appState.answers[appState.currentQuestionIndex] = currentAnswers;
+        }
+
+        // Handle next question
+        document.getElementById('nextQuestionBtn').addEventListener('click', () => {
+            const currentQuestion = fakeDatabase.questions[appState.currentRound][appState.currentQuestionIndex];
+            if (currentQuestion.type === 'numeric') {
+                appState.answers[appState.currentQuestionIndex] = document.getElementById('numericAnswer').value;
+            } else if (currentQuestion.type === 'essay') {
+                appState.answers[appState.currentQuestionIndex] = document.getElementById('essayAnswer').value;
+            }
+            
+            // Store user's answer for the current question in the team's answers object
+            if (appState.currentUser) {
+                if (!appState.currentUser.answers[appState.currentRound]) {
+                    appState.currentUser.answers[appState.currentRound] = {};
+                }
+                appState.currentUser.answers[appState.currentRound][appState.currentQuestionIndex] = appState.answers[appState.currentQuestionIndex];
+            }
+
+            if (appState.currentQuestionIndex < fakeDatabase.questions[appState.currentRound].length - 1) {
+                appState.currentQuestionIndex++;
+                loadQuestion(appState.currentQuestionIndex);
+            }
+        });
+
+        // Handle previous question
+        document.getElementById('previousQuestionBtn').addEventListener('click', () => {
+            const currentQuestion = fakeDatabase.questions[appState.currentRound][appState.currentQuestionIndex];
+            if (currentQuestion.type === 'numeric') {
+                appState.answers[appState.currentQuestionIndex] = document.getElementById('numericAnswer').value;
+            } else if (currentQuestion.type === 'essay') {
+                appState.answers[appState.currentQuestionIndex] = document.getElementById('essayAnswer').value;
+            }
+
+            // Store user's answer for the current question in the team's answers object
+            if (appState.currentUser) {
+                if (!appState.currentUser.answers[appState.currentRound]) {
+                    appState.currentUser.answers[appState.currentRound] = {};
+                }
+                appState.currentUser.answers[appState.currentRound][appState.currentQuestionIndex] = appState.answers[appState.currentQuestionIndex];
+            }
+
+            if (appState.currentQuestionIndex > 0) {
+                appState.currentQuestionIndex--;
+                loadQuestion(appState.currentQuestionIndex);
+            }
+        });
+
+        // Handle quiz submission
+        document.getElementById('submitQuizBtn').addEventListener('click', () => {
+            const currentQuestion = fakeDatabase.questions[appState.currentRound][appState.currentQuestionIndex];
+            if (currentQuestion.type === 'numeric') {
+                appState.answers[appState.currentQuestionIndex] = document.getElementById('numericAnswer').value;
+            } else if (currentQuestion.type === 'essay') {
+                appState.answers[appState.currentQuestionIndex] = document.getElementById('essayAnswer').value;
+            }
+            
+            // Store user's answer for the current question in the team's answers object
+            if (appState.currentUser) {
+                if (!appState.currentUser.answers[appState.currentRound]) {
+                    appState.currentUser.answers[appState.currentRound] = {};
+                }
+                appState.currentUser.answers[appState.currentRound][appState.currentQuestionIndex] = appState.answers[appState.currentQuestionIndex];
+            }
+
+            finishRound();
+        });
+
+        // Finish round and show results
+        function finishRound() {
+            if (appState.timerInterval) {
+                clearInterval(appState.timerInterval);
+                appState.timerInterval = null;
+            }
+            
+            const roundQuestions = fakeDatabase.questions[appState.currentRound];
+            let score = 0;
+            
+            for (let i = 0; i < roundQuestions.length; i++) {
+                const question = roundQuestions[i];
+                const userAnswer = appState.answers[i]; // Answer from current session
+                
+                if (question.type === 'multiple-choice') {
+                    if (typeof userAnswer === 'number' && userAnswer === question.correctAnswer) {
+                        score += question.points;
+                    }
+                } else if (question.type === 'numeric') {
+                    // Convert both to number for comparison
+                    if (Number(userAnswer) === Number(question.correctAnswer)) {
+                        score += question.points;
+                    }
+                } else if (question.type === 'multi-correct') {
+                    const correctAnswersSet = new Set(question.correctAnswers);
+                    const userAnswerSet = new Set(userAnswer || []); 
+
+                    let isCorrect = true;
+                    if (correctAnswersSet.size !== userAnswerSet.size) {
+                        isCorrect = false;
+                    } else {
+                        for (let ans of correctAnswersSet) {
+                            if (!userAnswerSet.has(ans)) {
+                                isCorrect = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (isCorrect) {
+                        score += question.points;
+                    }
+                }
+                // Essay questions are graded by admin later, so no score added here initially
+            }
+            
+            const teamIndex = fakeDatabase.teams.findIndex(t => t.id === appState.currentUser.id);
+            if (teamIndex !== -1) {
+                // Only update score for non-essay rounds here. Essay scores are updated via admin panel.
+                if (appState.currentRound !== 'code_breakers' && appState.currentRound !== 'essay') { // Assuming 'essay' is not a round type
+                    fakeDatabase.teams[teamIndex].scores[appState.currentRound] = score;
+                }
+            }
+            
+            const leaderboardIndex = fakeDatabase.leaderboard.findIndex(t => t.teamName === appState.currentUser.name);
+            if (leaderboardIndex !== -1) {
+                if (appState.currentRound !== 'code_breakers' && appState.currentRound !== 'essay') {
+                    fakeDatabase.leaderboard[leaderboardIndex].roundScores[appState.currentRound] = score;
+                }
+                // Recalculate overall score based on all round scores
+                let overall = 0;
+                for (const round in fakeDatabase.leaderboard[leaderboardIndex].roundScores) {
+                    overall += fakeDatabase.leaderboard[leaderboardIndex].roundScores[round];
+                }
+                fakeDatabase.leaderboard[leaderboardIndex].overallScore = overall;
+            }
+            
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+            
+            document.getElementById('completedRoundName').textContent = roundDisplayNames[appState.currentRound];
+            
+            // Display the score for the current round (which might be 0 for essay rounds initially)
+            document.getElementById('userScore').textContent = fakeDatabase.teams[teamIndex].scores[appState.currentRound];
+            
+            // Sort leaderboard for current round to get rank
+            const leaderboardForRank = [...fakeDatabase.leaderboard].sort((a, b) => b.roundScores[appState.currentRound] - a.roundScores[appState.currentRound]);
+            const rank = leaderboardForRank.findIndex(t => t.teamName === appState.currentUser.name) + 1;
+            document.getElementById('userRank').textContent = rank;
+            
+            const timeLeft = appState.timeRemaining > 0 ? appState.timeRemaining : 0; // Ensure not negative
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timeLeft').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            const answerDetailsElement = document.getElementById('answerDetails');
+            answerDetailsElement.innerHTML = '';
+            
+            for (let i = 0; i < roundQuestions.length; i++) {
+                const question = roundQuestions[i];
+                const userAnswer = appState.answers[i]; // Answer from current session
+                
+                const detailDiv = document.createElement('div');
+                detailDiv.className = 'border-l-4 pl-4 py-2';
+                
+                const questionText = document.createElement('p');
+                questionText.className = 'font-semibold';
+                questionText.textContent = `${i + 1}. ${question.question}`;
+                detailDiv.appendChild(questionText);
+
+                // Display question image in results
+                if (question.questionImage && question.questionImage.trim() !== '') {
+                    const img = document.createElement('img');
+                    img.src = question.questionImage;
+                    img.alt = 'Gambar Pertanyaan';
+                    img.className = 'question-image';
+                    detailDiv.appendChild(img);
+                }
+                
+                if (question.type === 'multiple-choice') {
+                    const correctOptionText = question.options[question.correctAnswer];
+                    const userOptionText = typeof userAnswer === 'number' ? question.options[userAnswer] : '-';
+                    
+                    const isCorrect = (typeof userAnswer === 'number' && userAnswer === question.correctAnswer);
+
+                    const userAnswerDisplay = document.createElement('p');
+                    userAnswerDisplay.className = isCorrect ? 'text-green-600' : 'text-red-600';
+                    userAnswerDisplay.textContent = `Jawaban Anda: ${userOptionText}`;
+                    detailDiv.appendChild(userAnswerDisplay);
+
+                    // Display user's selected option image
+                    if (typeof userAnswer === 'number' && question.optionImages && question.optionImages[userAnswer] && question.optionImages[userAnswer].trim() !== '') {
+                        const img = document.createElement('img');
+                        img.src = question.optionImages[userAnswer];
+                        img.alt = 'Gambar Jawaban Anda';
+                        img.className = 'option-image';
+                        userAnswerDisplay.appendChild(img);
+                    }
+                    
+                    if (!isCorrect) {
+                        const correctAnswerDisplay = document.createElement('p');
+                        correctAnswerDisplay.className = 'text-green-600';
+                        correctAnswerDisplay.textContent = `Jawaban benar: ${correctOptionText}`;
+                        detailDiv.appendChild(correctAnswerDisplay);
+
+                        // Display correct option image
+                        if (question.optionImages && question.optionImages[question.correctAnswer] && question.optionImages[question.correctAnswer].trim() !== '') {
+                            const img = document.createElement('img');
+                            img.src = question.optionImages[question.correctAnswer];
+                            img.alt = 'Gambar Jawaban Benar';
+                            img.className = 'option-image';
+                            correctAnswerDisplay.appendChild(img);
+                        }
+                    }
+                    
+                    const pointsInfo = document.createElement('p');
+                    pointsInfo.className = 'text-gray-600 text-sm';
+                    pointsInfo.textContent = `Poin: ${isCorrect ? question.points : 0}/${question.points}`;
+                    detailDiv.appendChild(pointsInfo);
+                    
+                    detailDiv.classList.add(isCorrect ? 'border-green-400' : 'border-red-400');
+                } else if (question.type === 'numeric') {
+                    const isCorrect = (Number(userAnswer) === Number(question.correctAnswer));
+
+                    const userAnswerDisplay = document.createElement('p');
+                    userAnswerDisplay.className = isCorrect ? 'text-green-600' : 'text-red-600';
+                    userAnswerDisplay.textContent = `Jawaban Anda: ${userAnswer || '-'}`;
+                    detailDiv.appendChild(userAnswerDisplay);
+
+                    if (!isCorrect) {
+                        const correctAnswerDisplay = document.createElement('p');
+                        correctAnswerDisplay.className = 'text-green-600';
+                        correctAnswerDisplay.textContent = `Jawaban benar: ${question.correctAnswer}`;
+                        detailDiv.appendChild(correctAnswerDisplay);
+                    }
+
+                    const pointsInfo = document.createElement('p');
+                    pointsInfo.className = 'text-gray-600 text-sm';
+                    pointsInfo.textContent = `Poin: ${isCorrect ? question.points : 0}/${question.points}`;
+                    detailDiv.appendChild(pointsInfo);
+
+                    detailDiv.classList.add(isCorrect ? 'border-green-400' : 'border-red-400');
+                } else if (question.type === 'multi-correct') {
+                    const correctAnswersSet = new Set(question.correctAnswers);
+                    const userAnswerSet = new Set(userAnswer || []);
+
+                    let isCorrect = true;
+                    if (correctAnswersSet.size !== userAnswerSet.size) {
+                        isCorrect = false;
+                    } else {
+                        for (let ans of correctAnswersSet) {
+                            if (!userAnswerSet.has(ans)) {
+                                isCorrect = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    const userAnswerDisplay = document.createElement('p');
+                    userAnswerDisplay.className = isCorrect ? 'text-green-600' : 'text-red-600';
+                    const selectedOptionsText = (userAnswer || []).map(idx => question.options[idx]).join(', ') || '-';
+                    userAnswerDisplay.textContent = `Jawaban Anda: ${selectedOptionsText}`;
+                    detailDiv.appendChild(userAnswerDisplay);
+
+                    // Display images for user's selected options
+                    if (Array.isArray(userAnswer) && question.optionImages) {
+                        userAnswer.forEach(idx => {
+                            if (question.optionImages[idx] && question.optionImages[idx].trim() !== '') {
+                                const img = document.createElement('img');
+                                img.src = question.optionImages[idx];
+                                img.alt = 'Gambar Jawaban Anda';
+                                img.className = 'option-image';
+                                userAnswerDisplay.appendChild(img);
+                            }
+                        });
+                    }
+
+                    if (!isCorrect) {
+                        const correctAnswerDisplay = document.createElement('p');
+                        correctAnswerDisplay.className = 'text-green-600';
+                        const correctOptionsText = question.correctAnswers.map(idx => question.options[idx]).join(', ');
+                        correctAnswerDisplay.textContent = `Jawaban benar: ${correctOptionsText}`;
+                        detailDiv.appendChild(correctAnswerDisplay);
+
+                        // Display images for correct options
+                        if (question.optionImages) {
+                            question.correctAnswers.forEach(idx => {
+                                if (question.optionImages[idx] && question.optionImages[idx].trim() !== '') {
+                                    const img = document.createElement('img');
+                                    img.src = question.optionImages[idx];
+                                    img.alt = 'Gambar Jawaban Benar';
+                                    img.className = 'option-image';
+                                    correctAnswerDisplay.appendChild(img);
+                                }
+                            });
+                        }
+                    }
+
+                    const pointsInfo = document.createElement('p');
+                    pointsInfo.className = 'text-gray-600 text-sm';
+                    pointsInfo.textContent = `Poin: ${isCorrect ? question.points : 0}/${question.points}`;
+                    detailDiv.appendChild(pointsInfo);
+
+                    detailDiv.classList.add(isCorrect ? 'border-green-400' : 'border-red-400');
+                } else if (question.type === 'essay') {
+                    const userAnswerDisplay = document.createElement('p');
+                    userAnswerDisplay.textContent = `Jawaban Anda: ${userAnswer || '-'}`;
+                    detailDiv.appendChild(userAnswerDisplay);
+                    
+                    const pointsInfo = document.createElement('p');
+                    pointsInfo.className = 'text-gray-600 text-sm italic';
+                    pointsInfo.textContent = `(Essay akan dinilai oleh admin)`;
+                    detailDiv.appendChild(pointsInfo);
+                    
+                    detailDiv.classList.add('border-yellow-400');
+                }
+                
+                answerDetailsElement.appendChild(detailDiv);
+            }
+        }
+
+        // Render leaderboard
+        function renderLeaderboard(type) {
+            const leaderboardBody = document.getElementById('leaderboardBody');
+            leaderboardBody.innerHTML = '';
+            
+            let sortedLeaderboard = [];
+            
+            if (type === 'overall') {
+                sortedLeaderboard = [...fakeDatabase.leaderboard].sort((a, b) => b.overallScore - a.overallScore);
+            } else {
+                sortedLeaderboard = [...fakeDatabase.leaderboard].sort((a, b) => b.roundScores[type] - a.roundScores[type]);
+            }
+            
+            sortedLeaderboard.forEach((team, index) => {
+                const row = document.createElement('tr');
+                row.className = index % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+                
+                const rankCell = document.createElement('td');
+                rankCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900';
+                rankCell.textContent = index + 1;
+                row.appendChild(rankCell);
+                
+                const nameCell = document.createElement('td');
+                nameCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                nameCell.textContent = team.teamName;
+                row.appendChild(nameCell);
+                
+                const scoreCell = document.createElement('td');
+                scoreCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                scoreCell.textContent = type === 'overall' ? 
+                    team.overallScore : 
+                    team.roundScores[type];
+                row.appendChild(scoreCell);
+                
+                const statusCell = document.createElement('td');
+                statusCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full';
+                
+                if (appState.currentUser && team.teamName === appState.currentUser.name) { // Check if currentUser is not null
+                    statusSpan.classList.add('bg-green-100', 'text-green-800');
+                    statusSpan.textContent = 'Regu Anda';
+                } else {
+                    statusSpan.classList.add('bg-gray-100', 'text-gray-800');
+                    statusSpan.textContent = 'Lainnya';
+                }
+                
+                statusCell.appendChild(statusSpan);
+                row.appendChild(statusCell);
+                
+                leaderboardBody.appendChild(row);
+            });
+            
+            document.querySelectorAll('#leaderboardScreen button').forEach(btn => {
+                btn.classList.remove('text-blue-600', 'border-blue-600');
+                btn.classList.add('text-gray-500', 'hover:text-blue-600');
+            });
+            
+            const activeBtnId = `show${type.charAt(0).toUpperCase() + type.slice(1)}LeaderboardBtn`;
+            const activeBtn = document.getElementById(activeBtnId);
+            if (activeBtn) {
+                activeBtn.classList.add('text-blue-600', 'border-blue-600');
+                activeBtn.classList.remove('text-gray-500', 'hover:text-blue-600');
+            }
+        }
+
+        // Render essays to grade (admin panel)
+        function renderEssaysToGrade() {
+            const essaysList = document.getElementById('essaysList');
+            essaysList.innerHTML = '';
+            
+            const essaysToGrade = [];
+            
+            // Iterate through all teams and their answers
+            fakeDatabase.teams.forEach(team => {
+                for (const roundType in fakeDatabase.questions) {
+                    const roundQuestions = fakeDatabase.questions[roundType];
+                    roundQuestions.forEach((question, qIndex) => {
+                        if (question.type === 'essay') {
+                            // Get the actual answer submitted by the team for this question
+                            const teamAnswer = team.answers[roundType] ? team.answers[roundType][qIndex] : null;
+
+                            if (teamAnswer) { // Only list if there's an answer
+                                essaysToGrade.push({
+                                    teamId: team.id,
+                                    teamName: team.name,
+                                    roundType: roundType,
+                                    questionId: question.id,
+                                    questionIndex: qIndex, // Store index to update specific answer
+                                    questionText: question.question,
+                                    questionImage: question.questionImage, // Pass question image
+                                    points: question.points,
+                                    answer: teamAnswer,
+                                    // Get current score for this round for this team
+                                    currentRoundScore: team.scores[roundType] || 0
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+
+            const gradingRoundFilter = document.getElementById('gradingRoundFilter').value;
+            const gradingTeamFilter = document.getElementById('gradingTeamFilter').value;
+
+            const filteredEssays = essaysToGrade.filter(essay => {
+                const matchesRound = gradingRoundFilter === 'all' || essay.roundType === gradingRoundFilter;
+                const matchesTeam = gradingTeamFilter === 'all' || essay.teamId.toString() === gradingTeamFilter;
+                return matchesRound && matchesTeam;
+            });
+            
+            if (filteredEssays.length === 0) {
+                essaysList.innerHTML = '<p class="text-center text-gray-500">Tidak ada jawaban essay yang perlu dinilai saat ini atau sesuai filter.</p>';
+                return;
+            }
+            
+            filteredEssays.forEach((essay, index) => {
+                const essayDiv = document.createElement('div');
+                essayDiv.className = 'bg-white rounded-lg shadow p-4';
+                
+                const roundName = roundDisplayNames[essay.roundType];
+                
+                const essayHtml = `
+                    <h4 class="font-semibold text-lg text-gray-800 mb-2">Regu: ${essay.teamName} - Ronde ${roundName}</h4>
+                    <p class="text-gray-700 mb-4">${essay.questionText}</p>
+                    ${essay.questionImage ? `<img src="${essay.questionImage}" alt="Gambar Pertanyaan" class="question-image">` : ''}
+                    <div class="bg-gray-50 p-3 rounded mb-4">
+                        <p class="text-gray-600 font-medium mb-1">Jawaban:</p>
+                        <p class="text-gray-800">${essay.answer}</p>
+                    </div>
+                    <div class="flex items-center mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mr-2">Nilai:</label>
+                        <input type="number" min="0" max="${essay.points}" value="${essay.currentRoundScore}" class="w-20 px-3 py-1 border rounded-lg essay-grade-input" data-team-id="${essay.teamId}" data-round-type="${essay.roundType}" data-question-index="${essay.questionIndex}">
+                        <span class="ml-2 text-sm text-gray-500">/ ${essay.points} poin</span>
+                    </div>
+                    <div class="flex justify-end">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg save-essay-btn">
+                            Simpan Nilai
+                        </button>
+                    </div>
+                `;
+                
+                essayDiv.innerHTML = essayHtml;
+                essaysList.appendChild(essayDiv);
+            });
+
+            // Add event listeners for save buttons
+            document.querySelectorAll('.save-essay-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const input = e.target.closest('.essay-grade-input') || e.target.parentNode.querySelector('.essay-grade-input');
+                    const teamId = parseInt(input.dataset.teamId);
+                    const roundType = input.dataset.roundType;
+                    const grade = parseInt(input.value); // Get the grade from the input field
+                    saveEssayGrade(teamId, roundType, grade);
+                });
+            });
+
+            // Populate team filter dropdown
+            const gradingTeamFilterSelect = document.getElementById('gradingTeamFilter');
+            gradingTeamFilterSelect.innerHTML = '<option value="all">Semua Regu</option>';
+            fakeDatabase.teams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team.id;
+                option.textContent = team.name;
+                gradingTeamFilterSelect.appendChild(option);
+            });
+            gradingTeamFilterSelect.value = gradingTeamFilter; // Set selected value
+
+            // Add event listeners for filters
+            document.getElementById('gradingRoundFilter').addEventListener('change', renderEssaysToGrade);
+            document.getElementById('gradingTeamFilter').addEventListener('change', renderEssaysToGrade);
+        }
+
+        // Save essay grade (actual function)
+        function saveEssayGrade(teamId, roundType, grade) {
+            const team = fakeDatabase.teams.find(t => t.id === teamId);
+            if (team) {
+                // Update the score for the specific round directly with the new grade
+                team.scores[roundType] = grade;
+
+                // Update leaderboard
+                const leaderboardEntry = fakeDatabase.leaderboard.find(l => l.teamName === team.name);
+                if (leaderboardEntry) {
+                    leaderboardEntry.roundScores[roundType] = team.scores[roundType];
+                    // Recalculate overall score based on all round scores
+                    leaderboardEntry.overallScore = Object.values(leaderboardEntry.roundScores).reduce((sum, s) => sum + s, 0);
+                }
+                alert(`Nilai ${grade} untuk essay regu ${team.name} di ronde ${roundDisplayNames[roundType]} telah disimpan.`);
+                renderEssaysToGrade(); // Re-render to reflect changes
+            }
+        }
+
+        // Render teams list (admin panel)
+        function renderTeamsList() {
+            const teamsList = document.getElementById('teamsList');
+            teamsList.innerHTML = '';
+            
+            fakeDatabase.teams.forEach(team => {
+                const teamRow = document.createElement('tr');
+                
+                const nameCell = document.createElement('td');
+                nameCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900';
+                nameCell.textContent = team.name;
+                teamRow.appendChild(nameCell);
+                
+                const membersCell = document.createElement('td');
+                membersCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                membersCell.textContent = team.members.join(', ');
+                teamRow.appendChild(membersCell);
+
+                const totalScoreCell = document.createElement('td');
+                totalScoreCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                const leaderboardEntry = fakeDatabase.leaderboard.find(l => l.teamName === team.name);
+                totalScoreCell.textContent = leaderboardEntry ? leaderboardEntry.overallScore : 0;
+                teamRow.appendChild(totalScoreCell);
+                
+                const actionsCell = document.createElement('td');
+                actionsCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                
+                const viewButton = document.createElement('button');
+                viewButton.className = 'text-blue-600 hover:text-blue-900 mr-3';
+                viewButton.textContent = 'Lihat';
+                viewButton.onclick = () => viewTeamDetails(team.id);
+                
+                const editButton = document.createElement('button');
+                editButton.className = 'text-indigo-600 hover:text-indigo-900 mr-3';
+                editButton.textContent = 'Edit';
+                editButton.onclick = () => editTeam(team.id);
+                
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'text-red-600 hover:text-red-900';
+                deleteButton.textContent = 'Hapus';
+                deleteButton.onclick = () => deleteTeam(team.id);
+                
+                actionsCell.appendChild(viewButton);
+                actionsCell.appendChild(editButton);
+                actionsCell.appendChild(deleteButton);
+                teamRow.appendChild(actionsCell);
+                
+                teamsList.appendChild(teamRow);
+            });
+        }
+
+        // View regu details (demo function)
+        function viewTeamDetails(teamId) {
+            const team = fakeDatabase.teams.find(t => t.id === teamId);
+            if (team) {
+                let scoreDetails = '';
+                for (const round in team.scores) {
+                    scoreDetails += `\n- ${roundDisplayNames[round] || round}: ${team.scores[round]}`;
+                }
+                alert(`Detail Regu:\nNama: ${team.name}\nAnggota: ${team.members.join(', ')}\nSkor:${scoreDetails}`);
+            }
+        }
+
+        // Edit regu (demo function)
+        function editTeam(teamId) {
+            alert(`Edit regu dengan ID ${teamId} (fungsi demo)`);
+        }
+
+        // Delete regu (demo function)
+        function deleteTeam(teamId) {
+            if (confirm('Apakah Anda yakin ingin menghapus regu ini?')) {
+                const teamIndex = fakeDatabase.teams.findIndex(t => t.id === teamId);
+                if (teamIndex > -1) {
+                    const teamName = fakeDatabase.teams[teamIndex].name;
+                    fakeDatabase.teams.splice(teamIndex, 1);
+                    
+                    const leaderboardIndex = fakeDatabase.leaderboard.findIndex(l => l.teamName === teamName);
+                    if (leaderboardIndex > -1) {
+                        fakeDatabase.leaderboard.splice(leaderboardIndex, 1);
+                    }
+                    alert(`Regu "${teamName}" berhasil dihapus.`);
+                    renderTeamsList(); // Re-render the list after deletion
+                }
+            }
+        }
+
+        // Admin Question Management Functions
+        function renderQuestionsList() {
+            questionsListDiv.innerHTML = '';
+            const selectedType = questionFilterSelect.value;
+            const selectedRound = roundFilterSelect.value;
+
+            let filteredQuestions = [];
+            for (const roundType in fakeDatabase.questions) {
+                if (selectedRound === 'all' || roundType === selectedRound) {
+                    fakeDatabase.questions[roundType].forEach(q => {
+                        if (selectedType === 'all' || q.type === selectedType) {
+                            filteredQuestions.push({ ...q, round: roundType });
+                        }
+                    });
+                }
+            }
+
+            if (filteredQuestions.length === 0) {
+                questionsListDiv.innerHTML = '<p class="text-center text-gray-500">Tidak ada soal yang ditemukan sesuai filter.</p>';
+                return;
+            }
+
+            filteredQuestions.forEach(question => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'bg-white rounded-lg shadow p-4 flex justify-between items-center';
+                questionDiv.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-gray-800">${question.question} ${question.questionImage ? '<span class="text-blue-500 text-xs">(Ada Gambar)</span>' : ''}</p>
+                        <p class="text-sm text-gray-600">Ronde: ${roundDisplayNames[question.round]} | Tipe: ${question.type === 'multiple-choice' ? 'Pilihan Ganda Tunggal' : question.type === 'multi-correct' ? 'Pilihan Ganda Kompleks' : question.type === 'numeric' ? 'Input Angka' : 'Essay'} | Poin: ${question.points}</p>
+                    </div>
+                    <div>
+                        <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm mr-2" onclick="openEditQuestionModal('${question.round}', ${question.id})">Edit</button>
+                        <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm" onclick="deleteQuestion('${question.round}', ${question.id})">Hapus</button>
+                    </div>
+                `;
+                questionsListDiv.appendChild(questionDiv);
+            });
+        }
+
+        function openAddQuestionModal() {
+            modalTitle.textContent = 'Tambah Soal Baru';
+            editingQuestionId = null;
+            editingQuestionRound = null;
+            questionTextInput.value = '';
+            questionImageInput.value = ''; // Clear image input
+            questionPointsInput.value = 10;
+            questionRoundSelect.value = 'memory';
+            questionTypeSelect.value = 'multiple-choice';
+            
+            // Clear and reset options/numeric fields
+            mcOptions.innerHTML = '';
+            for (let i = 0; i < 4; i++) { // Default 4 options for new single choice
+                addOptionField('', false, '');
+            }
+            numericCorrectAnswerInput.value = '';
+            toggleQuestionTypeFields(); // Show/hide fields based on default type
+            questionModal.classList.remove('hidden');
+        }
+
+        function openEditQuestionModal(roundType, questionId) {
+            modalTitle.textContent = 'Edit Soal';
+            editingQuestionId = questionId;
+            editingQuestionRound = roundType;
+            
+            const question = fakeDatabase.questions[roundType].find(q => q.id === questionId);
+            if (!question) {
+                alert('Soal tidak ditemukan!');
+                return;
+            }
+
+            questionRoundSelect.value = roundType;
+            questionTypeSelect.value = question.type;
+            questionTextInput.value = question.question;
+            questionImageInput.value = question.questionImage || ''; // Populate image input
+            questionPointsInput.value = question.points;
+
+            // Clear and populate options/numeric fields based on question type
+            mcOptions.innerHTML = '';
+            numericCorrectAnswerInput.value = '';
+
+            if (question.type === 'multiple-choice' || question.type === 'multi-correct') {
+                question.options.forEach((optionText, i) => {
+                    const isCorrect = question.type === 'multiple-choice' 
+                        ? question.correctAnswer === i 
+                        : (question.correctAnswers ? question.correctAnswers.includes(i) : false);
+                    const optionImage = (question.optionImages && question.optionImages[i]) ? question.optionImages[i] : '';
+                    addOptionField(optionText, isCorrect, optionImage);
+                });
+                // Ensure at least 4 options for single choice if editing an old question
+                if (question.type === 'multiple-choice' && question.options.length < 4) {
+                    for (let i = question.options.length; i < 4; i++) {
+                        addOptionField('', false, '');
+                    }
+                }
+            } else if (question.type === 'numeric') {
+                numericCorrectAnswerInput.value = question.correctAnswer;
+            }
+
+            toggleQuestionTypeFields(); // Show/hide fields based on loaded type
+            questionModal.classList.remove('hidden');
+        }
+
+        function closeQuestionModal() {
+            questionModal.classList.add('hidden');
+        }
+
+        function toggleQuestionTypeFields() {
+            const selectedType = questionTypeSelect.value;
+            optionsContainer.classList.add('hidden');
+            numericAnswerInputContainer.classList.add('hidden');
+            addOptionBtn.classList.add('hidden');
+
+            if (selectedType === 'multiple-choice' || selectedType === 'multi-correct') {
+                optionsContainer.classList.remove('hidden');
+                if (selectedType === 'multi-correct') {
+                    addOptionBtn.classList.remove('hidden');
+                } else {
+                    // Ensure exactly 4 options for single choice
+                    while (mcOptions.children.length < 4) {
+                        addOptionField('', false, '');
+                    }
+                    while (mcOptions.children.length > 4) {
+                        mcOptions.removeChild(mcOptions.lastChild);
+                    }
+                }
+            } else if (selectedType === 'numeric') {
+                numericAnswerInputContainer.classList.remove('hidden');
+            }
+        }
+
+        function addOptionField(optionText = '', isCorrect = false, optionImage = '') {
+            const optionIndex = mcOptions.children.length;
+            const div = document.createElement('div');
+            div.className = 'flex items-center mb-2'; // Added mb-2 for spacing
+            div.innerHTML = `
+                <input type="text" class="w-full px-4 py-2 border rounded-lg mr-2 option-text-input" placeholder="Opsi ${String.fromCharCode(65 + optionIndex)}" value="${optionText}">
+                <input type="text" class="w-full px-4 py-2 border rounded-lg mr-2 option-image-input" placeholder="URL Gambar Opsi (Opsional)" value="${optionImage}">
+                <input type="checkbox" class="h-5 w-5 text-blue-600 correct-checkbox" ${isCorrect ? 'checked' : ''}>
+                <label class="ml-2">Benar</label>
+                ${optionIndex >= 4 ? '<button type="button" class="ml-2 text-red-500 hover:text-red-700" onclick="removeOptionField(this)">X</button>' : ''}
+            `;
+            mcOptions.appendChild(div);
+        }
+
+        function removeOptionField(button) {
+            button.parentNode.remove();
+        }
+
+        function saveQuestion() {
+            const roundType = questionRoundSelect.value;
+            const questionType = questionTypeSelect.value;
+            const questionText = questionTextInput.value.trim();
+            const questionImage = questionImageInput.value.trim(); // Get question image URL
+            const points = parseInt(questionPointsInput.value);
+
+            if (!questionText || isNaN(points) || points <= 0) {
+                alert('Harap lengkapi pertanyaan dan poin dengan benar.');
+                return;
+            }
+
+            let newQuestion = {
+                question: questionText,
+                questionImage: questionImage, // Save question image
+                type: questionType,
+                points: points
+            };
+
+            if (questionType === 'multiple-choice' || questionType === 'multi-correct') {
+                const options = [];
+                const optionImages = []; // Array to store option image URLs
+                const correctAnswers = [];
+                let hasCorrect = false;
+
+                mcOptions.querySelectorAll('.flex.items-center').forEach((div, i) => {
+                    const optionInput = div.querySelector('.option-text-input');
+                    const optionImageInput = div.querySelector('.option-image-input'); // Get option image input
+                    const correctCheckbox = div.querySelector('.correct-checkbox');
+
+                    if (optionInput && optionInput.value.trim() !== '') {
+                        options.push(optionInput.value.trim());
+                        optionImages.push(optionImageInput ? optionImageInput.value.trim() : ''); // Save option image
+                        if (correctCheckbox && correctCheckbox.checked) {
+                            correctAnswers.push(i);
+                            hasCorrect = true;
+                        }
+                    }
+                });
+
+                if (options.length < 2) {
+                    alert('Harap masukkan minimal 2 pilihan jawaban.');
+                    return;
+                }
+                if (!hasCorrect) {
+                    alert('Harap pilih setidaknya satu jawaban yang benar.');
+                    return;
+                }
+
+                newQuestion.options = options;
+                newQuestion.optionImages = optionImages; // Save option images
+                if (questionType === 'multiple-choice') {
+                    if (correctAnswers.length !== 1) {
+                        alert('Untuk pilihan ganda tunggal, hanya boleh ada satu jawaban benar.');
+                        return;
+                    }
+                    newQuestion.correctAnswer = correctAnswers[0];
+                } else { // multi-correct
+                    newQuestion.correctAnswers = correctAnswers;
+                }
+            } else if (questionType === 'numeric') {
+                const correctAnswer = numericCorrectAnswerInput.value.trim();
+                if (correctAnswer === '' || isNaN(Number(correctAnswer))) {
+                    alert('Harap masukkan jawaban angka yang valid.');
+                    return;
+                }
+                newQuestion.correctAnswer = Number(correctAnswer);
+            } else if (questionType === 'essay') {
+                // No specific correct answer needed for essay, graded manually
+            }
+
+            if (!fakeDatabase.questions[roundType]) {
+                fakeDatabase.questions[roundType] = [];
+            }
+
+            if (editingQuestionId) {
+                // Edit existing question
+                const questionIndex = fakeDatabase.questions[editingQuestionRound].findIndex(q => q.id === editingQuestionId);
+                if (questionIndex > -1) {
+                    // If round type changed, remove from old round and add to new
+                    if (editingQuestionRound !== roundType) {
+                        const oldQuestion = fakeDatabase.questions[editingQuestionRound][questionIndex];
+                        fakeDatabase.questions[editingQuestionRound].splice(questionIndex, 1);
+                        newQuestion.id = fakeDatabase.questions[roundType].length > 0 ? Math.max(...fakeDatabase.questions[roundType].map(q => q.id)) + 1 : 1;
+                        fakeDatabase.questions[roundType].push(newQuestion);
+                    } else {
+                        fakeDatabase.questions[roundType][questionIndex] = { ...fakeDatabase.questions[roundType][questionIndex], ...newQuestion };
+                    }
+                    alert('Soal berhasil diperbarui!');
+                } else {
+                    alert('Soal tidak ditemukan untuk diperbarui.');
+                }
+            } else {
+                // Add new question
+                newQuestion.id = fakeDatabase.questions[roundType].length > 0 ? Math.max(...fakeDatabase.questions[roundType].map(q => q.id)) + 1 : 1;
+                fakeDatabase.questions[roundType].push(newQuestion);
+                alert('Soal berhasil ditambahkan!');
+            }
+
+            closeQuestionModal();
+            renderQuestionsList(); // Refresh the list
+        }
+
+        function deleteQuestion(roundType, questionId) {
+            if (confirm('Apakah Anda yakin ingin menghapus soal ini?')) {
+                const questionIndex = fakeDatabase.questions[roundType].findIndex(q => q.id === questionId);
+                if (questionIndex > -1) {
+                    fakeDatabase.questions[roundType].splice(questionIndex, 1);
+                    alert('Soal berhasil dihapus.');
+                    renderQuestionsList(); // Refresh the list
+                } else {
+                    alert('Soal tidak ditemukan.');
+                }
+            }
+        }
+
+        // Initialize the app
+        initApp();
+    </script>
+</body>
+</html>
